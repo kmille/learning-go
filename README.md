@@ -32,3 +32,4 @@ TOREAD
 - https://medium.com/golangspec/import-declarations-in-go-8de0fd3ae8ff
 - https://scene-si.org/2018/01/25/go-tips-and-tricks-almost-everything-about-imports/
 - https://yourbasic.org/golang/io-reader-interface-explained/
+- https://gobyexample.com/
