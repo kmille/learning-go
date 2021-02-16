@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,34 +10,33 @@ import (
 	"syscall"
 )
 
-var processList = make(map[int]process)
-
 type process struct {
 	cmdline string
 	uid     int
 	pid     int
 }
 
+var processList = make(map[int]process)
+
 func (p process) String() string {
 	return fmt.Sprintf("PID=%-5d UID=%-5d CMD=%s", p.pid, p.uid, p.cmdline)
 }
 
-func getProcessCmdline(pid int) (string, error) {
-	// TODO: error handling
-	cmdline, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-	if err != nil || (len(cmdline) == 0) {
-		cmdline, err = ioutil.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
-	}
-	// log.Println(err)
-	if err == nil {
-		cmdlineNice := strings.TrimRight(strings.ReplaceAll(string(cmdline), string(0), " "), "\n")
-		if *filterCMD != "" && !strings.Contains(cmdlineNice, *filterCMD) {
-			return "", errors.New(fmt.Sprintf("cmdline filter: '%s'", cmdlineNice))
-		}
-		return cmdlineNice, nil
-	}
+func checkForNewProcesses() {
 
-	return "", errors.New("Could not extract cmdline")
+	pids, err := getPIDs()
+	if err != nil {
+		log.Println("Error reading from /proc", err)
+		return
+	}
+	// iterating backwards is faster but the first print of the processes currently running would be in the wrong order
+	// for i := len(pids) - 1; i >= 0; i-- {
+	for i := 0; i < len(pids); i++ {
+		_, exist := processList[pids[i]]
+		if !exist {
+			printProcessInfos(pids[i])
+		}
+	}
 }
 
 func printProcessInfos(pid int) {
@@ -46,36 +44,55 @@ func printProcessInfos(pid int) {
 
 	cmdline, err := getProcessCmdline(pid)
 	if err != nil {
-		log.Printf("Could not get cmdline: %s\n", err)
+		// error or cmdline filtered
+		return
 	}
 	p.cmdline = cmdline
 
-	statInfo := syscall.Stat_t{}
-	err = syscall.Lstat(fmt.Sprintf("/proc/%d/", pid), &statInfo)
-	if err == nil {
-		p.uid = int(statInfo.Uid)
-	}
-	if *filterUID != -1 && p.uid != *filterUID {
+	uid, err := getProcessUID(pid)
+	if err != nil {
+		// error or uid filtered
 		return
 	}
+	p.uid = uid
+
 	log.Print(p)
 	processList[pid] = p
 }
 
-func checkForNewProcesses() {
-
-	pids, err := getPIDs()
+func getProcessUID(pid int) (int, error) {
+	// return only an error if we filter the UID
+	statInfo := syscall.Stat_t{}
+	err := syscall.Lstat(fmt.Sprintf("/proc/%d/", pid), &statInfo)
 	if err != nil {
-		log.Println("Error reading from /proc")
+		return -1, nil
 	}
-	// for i := len(pids) - 1; i >= 0; i-- {
-	for i := 0; i < len(pids); i++ {
-		_, exist := processList[pids[i]]
-		if !exist {
-			printProcessInfos(pids[i])
+	uid := int(statInfo.Uid)
+	if *filterUID != -1 && uid != *filterUID {
+		return -1, fmt.Errorf("Filtered out UID %d", uid)
+	}
+	return uid, nil
+}
 
+func getProcessCmdline(pid int) (string, error) {
+	// return only an error if we filter the process
+	cmdline, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil || (len(cmdline) == 0) {
+		cmdline, err = ioutil.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
+	}
+	if err != nil {
+		return fmt.Sprintf("??? (error: %q)", err), nil
+	}
+	cmdlineNice := strings.ReplaceAll(string(cmdline), "\000", " ")
+	cmdlineNice = strings.TrimRight(cmdlineNice, "\n")
+	cmdlineNice = strings.TrimRight(cmdlineNice, " ")
+	if *filterCMD != "" {
+		if !strings.Contains(cmdlineNice, *filterCMD) {
+			return "", fmt.Errorf("cmdline filter: '%s'", cmdlineNice)
 		}
 	}
+	return cmdlineNice, nil
+
 }
 
 func getPIDs() ([]int, error) {
@@ -94,7 +111,6 @@ func getPIDs() ([]int, error) {
 	for _, name := range names {
 		pid, err := strconv.Atoi(name)
 		if err == nil {
-
 			pids = append(pids, pid)
 		}
 	}

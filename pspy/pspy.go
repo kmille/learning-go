@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
-	// "fsnotify"
 	"github.com/kmille/fsnotify"
 	"golang.org/x/sys/unix"
 )
@@ -18,6 +18,7 @@ var (
 	outputFile *string
 	filterUID  *int
 	filterCMD  *string
+	debug      *bool
 
 	watcher *fsnotify.Watcher
 	logFile *os.File
@@ -28,6 +29,7 @@ func parseCommandLineArguments() {
 	outputFile = flag.String("w", "-", "output file")
 	filterUID = flag.Int("uid", -1, "filter UID")
 	filterCMD = flag.String("cmd", "", "filter CMD")
+	debug = flag.Bool("debug", false, "debug print for every event")
 	flag.Parse()
 
 	if *outputFile != "-" {
@@ -42,27 +44,16 @@ func parseCommandLineArguments() {
 func handleNotifyEvents() {
 	for {
 		select {
-		case _, ok := <-watcher.Events:
-			if !ok {
-				log.Println("error:", ok)
-				return
+		case event := <-watcher.Events:
+			if *debug {
+				log.Println("New event:", event)
 			}
-			// log.Println("New event:", event.Name, event.Op)
 			checkForNewProcesses()
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Println("watcher error", err)
+		case err := <-watcher.Errors:
+			cleanup(fmt.Sprintln("Watcher error", err.Error()), 1)
 		case signal := <-signals:
-			log.Println("Received signal", signal)
-			watcher.Close()
-			if logFile != nil {
-				logFile.Close()
-			}
-			os.Exit(0)
+			cleanup(fmt.Sprintln("Received signal", signal), 0)
 		}
-
 	}
 }
 
@@ -72,10 +63,9 @@ func main() {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	// I can't use := here. If so Go would use watcher as a local variable and not as the global variable
 	var err error
-	watcher, err = fsnotify.NewWatcher(unix.IN_OPEN)
+	watcher, err = fsnotify.NewWatcher(unix.IN_OPEN | unix.IN_ACCESS)
 	if err != nil {
 		log.Fatal(err)
-
 	}
 
 	go checkForNewProcesses()
@@ -85,7 +75,7 @@ func main() {
 		log.Println("Watching", location)
 		err = watcher.Add(location)
 		if err != nil {
-			log.Fatal(err)
+			cleanup(fmt.Sprintln("Error adding a location to the watcher", err), 1)
 		}
 	}
 
@@ -93,4 +83,13 @@ func main() {
 	// wait for ctrl-c
 	done := make(chan bool)
 	<-done
+}
+
+func cleanup(message string, returnValue int) {
+	log.Println(message)
+	watcher.Close()
+	if logFile != nil {
+		logFile.Close()
+	}
+	os.Exit(returnValue)
 }
