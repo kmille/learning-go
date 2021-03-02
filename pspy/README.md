@@ -11,12 +11,10 @@ pspy uses Linux' [inotifywatch](https://linux.die.net/man/1/inotifywatch) capabi
 3. parse /proc und parse process information. Print the data if we haven't already
 4. go to step 2 and wait for more events
 
-# how to use it?
+## how to use it?
+[![asciicast](https://asciinema.org/a/395925.svg)](https://asciinema.org/a/395925)
 
-![](https://asciinema.org/a/14.png)
-
-# Improvements
-
+## Improvements
 What's interesting is that sometimes we are too fast. Look hat the output of `/proc/141026/cmdline`:
 
 ```
