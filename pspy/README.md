@@ -1,26 +1,23 @@
-# pspy
+## pspy (process spy)
 
-This is my own implementation of [pspy](https://github.com/DominicBreuker/pspy) to learn Go. It prints every command which is executed.
+This is my own implementation of [pspy](https://github.com/DominicBreuker/pspy) to learn Go. It prints every executed command. It's nice to find out what a server is doing. In CTFs, it's nice to catch credentials when they are passed via the command line.
 
-TODO: describe what it does/how it works
+## How does it work?
 
-# TO READ
+pspy uses Linux' [inotifywatch](https://linux.die.net/man/1/inotifywatch) capabilities to get notified if a file is opened. 
 
-- defer over functions
-- global variables - good or evil
+1. parse the $PATH variable
+2. watch IN_OPEN events on every directory in $PATH. At this point we know if a binary is executed
+3. parse /proc und parse process information. Print the data if we haven't already
+4. go to step 2 and wait for more events
 
+# how to use it?
 
-- https://go.googlesource.com/proposal/+/master/design/go2draft-generics-overview.md
+![](https://asciinema.org/a/14.png)
 
-# TODO
+# Improvements
 
-- makefile
-- make a nice README.md
-    - let Github Actions run the tests
-    - provide a link to the working binary in the README
-    - make an asciinema capture
-- rename argv[0]
-- We are too fast. The cmdline of a pid changes ....
+What's interesting is that sometimes we are too fast. Look hat the output of `/proc/141026/cmdline`:
 
 ```
 2021/02/16 13:30:33 [0] cmdline of 141026 is zsh                       
@@ -30,9 +27,5 @@ TODO: describe what it does/how it works
 2021/02/16 13:30:33 [4] cmdline of 141026 is ls -vlah --color=auto 
 ```
 
-- we are vuln to races but I'm not sure if it's a problem
-
-- Tests
-    - compare results with pspy
-    - are we now get every command? What about the hidden commands  (tab tab, git executed by the shell)
-
+Even it's the same pid, the content of cmdline changes (from `zsh` which is my shell to `ls` which is an alias to then `ls -vlah --color=auto?`).
+We are not thread safe at the moment. But I think in the worst case we print a process more than once (which is ok for now).

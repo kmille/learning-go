@@ -32,6 +32,7 @@ func checkForNewProcesses() {
 	// iterating backwards is faster but the first print of the processes currently running would be in the wrong order
 	// for i := len(pids) - 1; i >= 0; i-- {
 	for i := 0; i < len(pids); i++ {
+		// TODO: this is not thread safe
 		_, exist := processList[pids[i]]
 		if !exist {
 			printProcessInfos(pids[i])
