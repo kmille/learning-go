@@ -1,9 +1,27 @@
 ## pspy (process spy) [![Go tests for pspy](https://github.com/kmille/learning-go/actions/workflows/pspy_tests.yml/badge.svg)](https://github.com/kmille/learning-go/actions/workflows/pspy_tests.yml)
 
 This is my own implementation of [pspy](https://github.com/DominicBreuker/pspy) to learn Go. It prints every executed command. It's nice to find out what a server is doing. In CTFs, it's nice to catch credentials when they are passed via the command line.
+## How to get it?
+
+[Download link](https://github.com/kmille/learning-go/releases/download/v0.1/pspy) or via command line:
+
+```bash
+kmille@linbox:pspy wget https://github.com/kmille/learning-go/releases/download/v0.1/pspy && chmod +x pspy
+...
+2021-03-02 13:14:30 (23.6 MB/s) - ‘pspy’ saved [2464899/2464899]
+kmille@linbox:pspy ./pspy -h
+Usage of ./pspy:
+  -cmd string
+        filter CMD
+  -debug
+        debug print for every event
+  -uid int
+        filter UID (default -1)
+  -w string
+        output file (default "-")
+```
 
 ## How does it work?
-
 pspy uses Linux' [inotifywatch](https://linux.die.net/man/1/inotifywatch) capabilities to get notified if a file is opened. 
 
 1. parse the $PATH variable
@@ -11,7 +29,7 @@ pspy uses Linux' [inotifywatch](https://linux.die.net/man/1/inotifywatch) capabi
 3. parse /proc und parse process information. Print the data if we haven't already
 4. go to step 2 and wait for more events
 
-## how to use it?
+## Demo
 [![asciicast](https://asciinema.org/a/395925.svg)](https://asciinema.org/a/395925)
 
 ## Improvements
