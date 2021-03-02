@@ -1,4 +1,4 @@
-## pspy (process spy)
+## pspy (process spy) [![Go tests for pspy](https://github.com/kmille/learning-go/actions/workflows/pspy_tests.yml/badge.svg)](https://github.com/kmille/learning-go/actions/workflows/pspy_tests.yml)
 
 This is my own implementation of [pspy](https://github.com/DominicBreuker/pspy) to learn Go. It prints every executed command. It's nice to find out what a server is doing. In CTFs, it's nice to catch credentials when they are passed via the command line.
 
