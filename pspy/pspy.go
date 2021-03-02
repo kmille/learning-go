@@ -48,7 +48,7 @@ func handleNotifyEvents() {
 			if *debug {
 				log.Println("New event:", event)
 			}
-			checkForNewProcesses()
+			go checkForNewProcesses()
 		case err := <-watcher.Errors:
 			cleanup(fmt.Sprintln("Watcher error", err.Error()), 1)
 		case signal := <-signals:
@@ -63,7 +63,8 @@ func main() {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	// I can't use := here. If so Go would use watcher as a local variable and not as the global variable
 	var err error
-	watcher, err = fsnotify.NewWatcher(unix.IN_OPEN | unix.IN_ACCESS)
+	// watcher, err = fsnotify.NewWatcher(unix.IN_OPEN | unix.IN_ACCESS)
+	watcher, err = fsnotify.NewWatcher(unix.IN_OPEN)
 	if err != nil {
 		log.Fatal(err)
 	}
