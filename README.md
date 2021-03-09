@@ -7,6 +7,7 @@ This repository documents my progress of learning Go.
 - [cryptopals](https://cryptopals.com/) [solutions](https://github.com/kmille/cryptopals.com-solutions)
 - pspy prints every new process which is executed.
 - wifi - a wifi client that scans for wifi networks and connects to it
+- timer - a simple timer
 
 ## TODO
 - try the debugger
