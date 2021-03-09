@@ -28,6 +28,7 @@ type wifi struct {
 	wpa2           string
 	macAddress     []byte
 	frequency      uint16
+	psk            string
 }
 
 func (w *wifi) String() string {
@@ -46,56 +47,29 @@ func hexEncodeMacAddress(mac []byte) string {
 
 func newWifi(conn *dbus.Conn, dbusIdentifier dbus.ObjectPath) *wifi {
 	b := wifi{dbusIdentifier: string(dbusIdentifier)}
-	variant, err := getWifiProperty(conn, dbusIdentifier, "SSID")
-	if err != nil {
-		fmt.Println("TODO error handling 1")
-		return nil
-	}
+	variant, _ := getWifiProperty(conn, dbusIdentifier, "SSID")
+
 	b.ssid = variant.Value().([]uint8)
-	variant, err = getWifiProperty(conn, dbusIdentifier, "Signal")
-	if err != nil {
-		fmt.Println("TODO error handling 2")
-		return nil
-	}
+	variant, _ = getWifiProperty(conn, dbusIdentifier, "Signal")
 	b.signal = variant.Value().(int16)
 
-	variant, err = getWifiProperty(conn, dbusIdentifier, "Frequency")
-	if err != nil {
-		fmt.Println("TODO error handling 2")
-		return nil
-	}
+	variant, _ = getWifiProperty(conn, dbusIdentifier, "Frequency")
 	b.frequency = variant.Value().(uint16)
 
-	variant, err = getWifiProperty(conn, dbusIdentifier, "WPA")
-	if err != nil {
-		fmt.Println("TODO error handling 2")
-		return nil
-	}
+	variant, _ = getWifiProperty(conn, dbusIdentifier, "WPA")
 	wpa := variant.Value().(map[string]dbus.Variant)
 	wpaKeyMgmt := wpa["KeyMgmt"].Value().([]string)
 	b.wpa = strings.Join(wpaKeyMgmt, " ")
 
-	variant, err = getWifiProperty(conn, dbusIdentifier, "RSN")
-	if err != nil {
-		fmt.Println("TODO error handling 3")
-		return nil
-	}
+	variant, _ = getWifiProperty(conn, dbusIdentifier, "RSN")
 	wpa2 := variant.Value().(map[string]dbus.Variant)
 	wpa2KeyMgmt := wpa2["KeyMgmt"].Value().([]string)
 	b.wpa2 = strings.Join(wpa2KeyMgmt, " ")
 
-	variant, err = getWifiProperty(conn, dbusIdentifier, "BSSID")
-	if err != nil {
-		fmt.Println("TODO error handling 4")
-		return nil
-	}
+	variant, _ = getWifiProperty(conn, dbusIdentifier, "BSSID")
 	b.macAddress = variant.Value().([]byte)
 
-	variant, err = getWifiProperty(conn, dbusIdentifier, "Privacy")
-	if err != nil {
-		fmt.Println("TODO error handling 4")
-		return nil
-	}
+	variant, _ = getWifiProperty(conn, dbusIdentifier, "Privacy")
 	b.open = !variant.Value().(bool)
 
 	return &b
@@ -105,7 +79,7 @@ func getWifiProperty(conn *dbus.Conn, objectPath dbus.ObjectPath, property strin
 	variant, err := conn.Object(busName, objectPath).GetProperty(busName + ".BSS." + property)
 	if err != nil {
 		fmt.Printf("Failed to read wifi property %q: %s\n", property, err)
-		return dbus.MakeVariant(""), err
+		return dbus.MakeVariant(fmt.Sprintf("Error: %q", err)), err
 	}
 	return variant, nil
 }
@@ -130,7 +104,7 @@ func registerWifiInterface(conn *dbus.Conn, iface string) error {
 
 func removeWifiInterface(conn *dbus.Conn, iface string) error {
 	obj := conn.Object(busName, dbusObjectPath)
-	name, err := dbusGetWifiInterfaceName(conn, iface)
+	name, err := getWifiInterfaceName(conn, iface)
 	if err != nil {
 		// interface was removed previously
 		return nil
@@ -144,7 +118,7 @@ func removeWifiInterface(conn *dbus.Conn, iface string) error {
 	return nil
 }
 
-func dbusGetWifiInterfaceName(conn *dbus.Conn, iface string) (interfacePath string, err error) {
+func getWifiInterfaceName(conn *dbus.Conn, iface string) (interfacePath string, err error) {
 	obj := conn.Object(busName, dbusObjectPath)
 	err = obj.Call(dbusInterfacePrefix+".GetInterface", 0, iface).Store(&interfacePath)
 	return
@@ -152,14 +126,14 @@ func dbusGetWifiInterfaceName(conn *dbus.Conn, iface string) (interfacePath stri
 
 func scanWifiNetworks(conn *dbus.Conn, iface string, runOnce bool) {
 	for {
-		interfacePath, err := dbusGetWifiInterfaceName(conn, iface)
+		interfacePath, err := getWifiInterfaceName(conn, iface)
 		if err != nil {
 			cleanup(conn, iface, err)
 		}
-		obj := conn.Object("fi.w1.wpa_supplicant1", dbus.ObjectPath(interfacePath))
+		obj := conn.Object(busName, dbus.ObjectPath(interfacePath))
 		argument := make(map[string]dbus.Variant)
 		argument["Type"] = dbus.MakeVariant("active")
-		call := obj.Call("fi.w1.wpa_supplicant1.Interface.Scan", 0, argument)
+		call := obj.Call(dbusInterfacePrefix+".Interface.Scan", 0, argument)
 		if call.Err != nil {
 			fmt.Println("Could not scan wifi signals:", call.Err)
 			cleanup(conn, iface, err)
@@ -176,7 +150,7 @@ func scanWifiNetworks(conn *dbus.Conn, iface string, runOnce bool) {
 
 func getScannedWifiNetworks(conn *dbus.Conn, iface string) ([]*wifi, error) {
 	var wifis []*wifi
-	interfaceName, err := dbusGetWifiInterfaceName(conn, iface)
+	interfaceName, err := getWifiInterfaceName(conn, iface)
 	if err != nil {
 		return []*wifi{}, err
 	}
@@ -229,27 +203,27 @@ func handleScanComplete(conn *dbus.Conn, iface string, runOnce bool) []*wifi {
 }
 
 func connectNewWifiNetwork(conn *dbus.Conn, iface string, wifi *wifi) {
-	var password string
 	argument := make(map[string]dbus.Variant)
 	argument["ssid"] = dbus.MakeVariant(wifi.ssid)
 	if wifi.open {
-		password = "NONE"
+		wifi.psk = "NONE"
 	} else {
-		fmt.Println("Please enter the wifi password")
+		fmt.Printf("Please enter the password for wifi %q\n", wifi.ssid)
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
-		// TODO: calculate hash
-		// argument["psk"] = dbus.MakeVariant("AiNuf7xeBeaJei0a")
-		password = strings.TrimRight(text, "\n")
+		// TODO: calculate hash (won't work for WPA3)
+		// https://pkg.go.dev/golang.org/x/crypto/pbkdf2
+		// http://jorisvr.nl/wpapsk.html
+		wifi.psk = strings.TrimRight(text, "\n")
 	}
-	argument["psk"] = dbus.MakeVariant(password)
+	argument["psk"] = dbus.MakeVariant(wifi.psk)
 	if strings.Contains(wifi.wpa2, "sae") {
 		// handle WPA3
 		argument["key_mgmt"] = dbus.MakeVariant("SAE")
 		argument["ieee80211w"] = dbus.MakeVariant(2)
 	}
 
-	name, err := dbusGetWifiInterfaceName(conn, iface)
+	name, err := getWifiInterfaceName(conn, iface)
 	if err != nil {
 		cleanup(conn, iface, err)
 	}
@@ -265,36 +239,44 @@ func connectNewWifiNetwork(conn *dbus.Conn, iface string, wifi *wifi) {
 	if call.Err != nil {
 		cleanup(conn, iface, call.Err)
 	}
-	fmt.Printf("Successfully switched to the new network %q\n", wifi.ssid)
-
+	// BUG: we always get a success even if we enter the wrong password?
+	fmt.Printf("Successfully connected to %q\n", wifi.ssid)
 	fmt.Println("NOTE: the connection to the new wifi will be dropped if this program terminates.")
+	dumpWpaSupplicantConfig(iface, wifi)
+
+	fmt.Println("Waiting for termination ...")
+	for {
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func dumpWpaSupplicantConfig(iface string, wifi *wifi) {
 	wpaSupplicantConfig := fmt.Sprintf("/etc/wpa_supplicant/wpa_supplicant-%s.conf", iface)
 	fmt.Printf("Do you want to save the network profile for %s in %s?\n", wifi.ssid, wpaSupplicantConfig)
-
-	// TODO: check if this file exists
 
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')
 	if strings.Contains(text, "y") {
-		f, err := os.OpenFile(wpaSupplicantConfig, os.O_APPEND|os.O_WRONLY, 0600)
-		if err != nil {
-			fmt.Println("Error writing config file:", err)
-		} else {
-			wpaSupplicantProfile := fmt.Sprintf("\nnetwork={         \nssid=%s         \npsk=\"%s\"\n", wifi.ssid, password)
-			fmt.Println(wpaSupplicantProfile)
-			_, err = f.WriteString(wpaSupplicantProfile)
-			if err != nil {
-				fmt.Println("Error writing config file:", err)
-			} else {
-				fmt.Println("Wrote config")
-			}
+		if _, err := os.Stat(wpaSupplicantConfig); os.IsNotExist(err) {
+			fmt.Printf("Error: Could not find config file %q\n", wpaSupplicantConfig)
+			return
 		}
-		f.Close()
+		f, err := os.OpenFile(wpaSupplicantConfig, os.O_APPEND|os.O_WRONLY, 0600)
+		defer f.Close()
+		if err != nil {
+			fmt.Println("Error: Could not open config file:", err)
+			return
+		}
+		// this does not work with WPA3: ieee80211w and key_mgmt are missing.
+		// Also password hashing does not work (don't know why)
+		wpaSupplicantProfile := fmt.Sprintf("\nnetwork={\n         ssid=%s\n         psk=\"%s\"\n}\n", wifi.ssid, wifi.psk)
+		_, err = f.WriteString(wpaSupplicantProfile)
+		if err != nil {
+			fmt.Println("Error: Could not write to config file:", err)
+			return
+		}
+		fmt.Println("Wrote config")
 	}
-
-	// TODO: das ist mist hier. danach verschwindets wieder
-	fmt.Println("Waiting ...")
-	time.Sleep(50 * time.Second)
 }
 
 func checkRootPrivileges() {
@@ -334,8 +316,10 @@ func cleanup(conn *dbus.Conn, iface string, msg interface{}) {
 
 func main() {
 	var iface string
+
 	flag.Usage = func() {
-		fmt.Println("Usage:\nTODO")
+		fmt.Println("Usage: wifi client that can scan for wifi networks and connect to it (uses d-bus interface of wpa_supplicant)",
+			"\n-i string     name of your wifi network device, e.g. wlan0\nscan          scan for networks\nconnect       scan for networks and connect to one")
 	}
 	flag.StringVar(&iface, "i", "", "name of your wifi network device, e.g. wlan0")
 	flag.Parse()
@@ -357,7 +341,6 @@ func main() {
 		cleanup(conn, iface, sig)
 	}()
 
-	done := make(chan bool, 1)
 	if flag.Args()[0] == "scan" {
 		// both go routines are stopped via ctrl-c
 		go handleScanComplete(conn, iface, false)
@@ -368,19 +351,17 @@ func main() {
 		scanWifiNetworks(conn, iface, true)
 		wifis := handleScanComplete(conn, iface, true)
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Println("Which wifi do you want to connect?")
-		fmt.Print("Enter text: ")
+		fmt.Print("Which wifi do you want to connect? ")
 		text, _ := reader.ReadString('\n')
 		wifiIndex, err := strconv.Atoi(strings.TrimRight(text, "\n"))
 		if err != nil {
 			cleanup(conn, iface, err)
 		}
-		fmt.Println("you choose", wifiIndex, wifis[wifiIndex].dbusIdentifier)
 		connectNewWifiNetwork(conn, iface, wifis[wifiIndex])
-		done <- true
 	}
 
-	<-done
-	cleanup(conn, iface, nil)
+	for {
+		time.Sleep(1 * time.Second)
+	}
 
 }

@@ -7,13 +7,10 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-const iface string = "wlp3s0"
-
 var conn *dbus.Conn
 
-func init() {
-	// defer conn.Close()
-}
+const ifaceTest string = "wlp3s0"
+
 func TestMain(m *testing.M) {
 	fmt.Println("Let's do some tests")
 	conn = connect()
@@ -23,58 +20,75 @@ func TestMain(m *testing.M) {
 	conn.Close()
 }
 
-func TestDbusGetWifiInterfaceName(t *testing.T) {
-	_, err := dbusGetWifiInterfaceName(conn, "this does not exist")
+func TestRegisterWifiInterface(t *testing.T) {
+	_, err := getWifiInterfaceName(conn, "this does not exist")
 	if err == nil {
 		t.Fatal("This interface should not exist", err)
 	}
 
-	err = dbusRegisterWifiInterface(conn, iface)
+	err = registerWifiInterface(conn, ifaceTest)
+
 	if err != nil {
 		t.Fatal("Could not register interface for testing", err)
 	}
-	_, err = dbusGetWifiInterfaceName(conn, iface)
+	_, err = getWifiInterfaceName(conn, ifaceTest)
 	if err != nil {
 		t.Fatal("Could not get interface name", err)
 	}
 }
 
 func TestDbusRegisterWifiInterface(t *testing.T) {
-	err := dbusRemoveWifiInterface(conn, iface)
+	err := removeWifiInterface(conn, ifaceTest)
 	if err != nil {
 		t.Fatal("Could not remove interface for testing", err)
 	}
-	err = dbusRegisterWifiInterface(conn, iface)
+	err = registerWifiInterface(conn, ifaceTest)
 	if err != nil {
 		t.Fatal("Could not register interface for testing", err)
 	}
 
-	err = dbusRegisterWifiInterface(conn, "this does not exist")
+	err = registerWifiInterface(conn, "this does not exist")
 	if err == nil {
 		t.Fatal("Registering an unknown interface should fail", err)
 	}
 }
 
-func TestDbusRemoveWifiInterface(t *testing.T) {
-	err := dbusRemoveWifiInterface(conn, iface)
+func TestRemoveWifiInterface(t *testing.T) {
+	err := removeWifiInterface(conn, ifaceTest)
 	if err != nil {
 		t.Fatal("Could not remove interface", err)
 	}
-	if err = dbusRegisterWifiInterface(conn, iface); err != nil {
+	if err = registerWifiInterface(conn, ifaceTest); err != nil {
 		t.Fatal("Could not register interface", err)
 	}
-	err = dbusRemoveWifiInterface(conn, iface)
+	err = removeWifiInterface(conn, ifaceTest)
 	if err != nil {
 		t.Fatal("Could not remove interface", err)
 	}
 }
 
-/*
-func TestDbusListRegisteredWifiInterfaces(t *testing.T) {
-	_, err := dbusListRegisteredWifiInterfaces(conn)
+func TestWifiScan(t *testing.T) {
+	err := registerWifiInterface(conn, ifaceTest)
 	if err != nil {
-		t.Fatal("Error listing interfaces", err)
+		t.Fatal("Could not register interface for testing", err)
+
 	}
-	// t.Log("Found interface(s):", len(interfaces))
+	scanWifiNetworks(conn, ifaceTest, true)
+	scannedWifis := handleScanComplete(conn, ifaceTest, true)
+	if err != nil {
+		t.Fatal("Could not get scanned wifi networks", err)
+	}
+	variant, err := getWifiProperty(conn, dbus.ObjectPath(scannedWifis[0].dbusIdentifier), "SSID")
+	if err != nil {
+		t.Fatal("Could not read SSID")
+	}
+
+	ssid := variant.Value().([]uint8)
+	t.Logf("Scanned SSID: %q", ssid)
+
+	err = removeWifiInterface(conn, ifaceTest)
+	if err != nil {
+		t.Fatal("Could not remove interface", err)
+	}
+	// func getWifiProperty(conn *dbus.Conn, objectPath dbus.ObjectPath, property string) (dbus.Variant, error) {
 }
-*/

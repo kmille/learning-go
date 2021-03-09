@@ -1,13 +1,19 @@
 ## learning Go
 
-This repository documents my process of learning Go.
+This repository documents my progress of learning Go.
 
 - tour has some code snippets out of `golang.org/x/tour` 
 - gurl is a simple curl implementation
+- [cryptopals](https://cryptopals.com/) [solutions](https://github.com/kmille/cryptopals.com-solutions)
 - pspy prints every new process which is executed.
+- wifi - a wifi client that scans for wifi networks and connects to it
 
 ## TODO
 - try the debugger
+
+### IDEAS
+
+- smal survey
 
 ## vscode shortcuts
 
