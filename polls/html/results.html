@@ -1,0 +1,19 @@
+{{ template "header" }}
+this is the results page
+
+Title: {{ .q.title }}
+Description: {{ .q.description }}
+
+{{ $questions := .q.questions}}
+{{ range .a  }}
+    {{ range $name, $answere := . }}
+        {{ with (index $questions $name) -}}  
+            Question: {{ .question }}
+        {{ end -}}
+        Answere: {{ $answere }}
+    {{- end -}}
+       <hr/>
+{{- end -}}
+
+
+{{ template "footer" }}
