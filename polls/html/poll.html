@@ -1,0 +1,20 @@
+{{ template "header" }}
+    <strong>{{printf "%s" .title}}</strong><br>
+    <br>
+    {{printf "%s" .description}} <br><br>
+    
+    <form method="POST">
+    {{ range $name, $q := .questions }}
+        {{printf "%s" $q.question}} <br>
+        {{ if eq .htmlType "text" }}
+            <input type="text" size="40" name="{{ printf "%s" $name}}"/>  <br><br>
+        {{ else }}
+            <textarea rows="4" cols="100"  name="{{ printf "%s" $name }}"></textarea> <br><br>
+        {{ end }}
+    {{ end }}
+
+    <input type="submit" value="Abschicken"/>
+    </form>
+
+
+{{ template "footer" }}

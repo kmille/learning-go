@@ -1,19 +1,17 @@
 {{ template "header" }}
-this is the results page
+<strong>Results: {{ .q.title }}</strong><br>
 
-Title: {{ .q.title }}
-Description: {{ .q.description }}
-
+<hr/>
 {{ $questions := .q.questions}}
 {{ range .a  }}
     {{ range $name, $answere := . }}
         {{ with (index $questions $name) -}}  
-            Question: {{ .question }}
+            <strong>{{ .question }}</strong><br>
         {{ end -}}
-        Answere: {{ $answere }}
+            {{ printf "%s" $answere }}<br>
+        <br>
     {{- end -}}
-       <hr/>
+        <hr/><br>
 {{- end -}}
-
 
 {{ template "footer" }}

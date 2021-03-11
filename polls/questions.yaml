@@ -1,0 +1,25 @@
+title: Current state of WizardsofDos
+description: "Hallo Mensch,<br>
+um unser CTF-Team WizardsOfDos ist es ziemlich ruhig geworden. Diese Umfrage richtet sich an alle, die mal CTF gespielt haben oder es in Zukunft machen möchten. Diese Umfrage soll ein Stimmungsbild einholen, um das aktuelle Interesse mal abzufragen. Seid also ruhig verbose beim Beantworten der Fragen. Alle abgegebenen Ergebnisse sind öffentlich einsehbar! Ich sehe diese Umfrage als Kommunikations-Medium, da ich einen Call oder ähnliches nicht für realistisch halte. Vielen Dank wenn du dir die Zeit nimmst! <br>kmille"
+questions:
+  question0:
+    question: Mit welchem Namen möchtest du in den Ergebnissen auftauchen (anonym sein ist auch ok)?
+    htmlType: text
+  question1:
+    question: "Sollen wir das regelmäßige WizardsOfDos-Treffen wieder reaktivieren? Wenn ja: Warum? Was fehlt dir gerade?"
+    htmlType: textarea
+  question2:
+    question: Wie oft und an welchem Tag sollte das WizardsOfDos-Treffen stattfinden?
+    htmlType: textarea
+  question3:
+    question: Was wünscht du dir inhaltlich vom WizardsOfDos-Treffen?
+    htmlType: textarea
+  question4:
+    question: "Hast du Lust dich aktiv beim WizardsOfDos-Treffen einzubringen? Wenn ja: in welcher Form?"
+    htmlType: textarea
+  question5:
+    question: "Hast du Lust in Zukunft gemeinsam an CTFs teilzunehmen? Wenn ja: wie regelmäßig?"
+    htmlType: textarea
+  question6:
+    question: Was hältst du davon, wenn wir uns zum CTF spielen mit einem anderen CTF-Team zusammen tun?
+    htmlType: textarea

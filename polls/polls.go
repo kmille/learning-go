@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"text/template"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -16,7 +16,7 @@ import (
 const questionsYaml string = "questions.yaml"
 const locationAnsweres string = "answeres"
 
-var templates = template.Must(template.ParseFiles("html/main.html", "html/view.html", "html/results.html", "html/header.html", "html/footer.html"))
+var templates = template.Must(template.ParseFiles("html/main.html", "html/poll.html", "html/results.html", "html/header.html", "html/footer.html"))
 
 func renderTemplate(w http.ResponseWriter, template string, params map[interface{}]interface{}) {
 	err := templates.ExecuteTemplate(w, template+".html", params)
@@ -99,10 +99,10 @@ func handlerFillPoll(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		w.Write([]byte("Thank You"))
+		w.Write([]byte("Thank You!"))
 
 	} else {
-		renderTemplate(w, "view", loadPollQuestions())
+		renderTemplate(w, "poll", loadPollQuestions())
 	}
 }
 
@@ -111,9 +111,9 @@ func handlerMain(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/poll/", handlerMain)
-	http.HandleFunc("/poll/fill", handlerFillPoll)
-	http.HandleFunc("/poll/list", handlerShowPollResults)
+	http.HandleFunc("/", handlerMain)
+	http.HandleFunc("/fill", handlerFillPoll)
+	http.HandleFunc("/list", handlerShowPollResults)
 	fmt.Println("Let's listen")
 	log.Fatal(http.ListenAndServe("127.0.0.1:5000", nil))
 }
