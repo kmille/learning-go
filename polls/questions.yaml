@@ -23,3 +23,6 @@ questions:
   question6:
     question: Was hältst du davon, wenn wir uns zum CTF spielen mit einem anderen CTF-Team zusammen tun?
     htmlType: textarea
+  question7:
+    question: Platz für weitere Anmerkungen, Kritik, Wünsche, ...
+    htmlType: textarea
