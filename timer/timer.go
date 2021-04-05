@@ -9,7 +9,6 @@ import (
 )
 
 func speak(text string) {
-	fmt.Println(text)
 	cmd := exec.Command("bash", "-c", fmt.Sprintf("espeak \"%s\" --stdout | paplay --volume 65000", text))
 	_, err := cmd.Output()
 	if err != nil {
